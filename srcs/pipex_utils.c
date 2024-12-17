@@ -68,7 +68,7 @@ void ft_free(char **get_free)
 
 	i = -1;
 	while(get_free[++i])
-		free(get_free[i])
+		free(get_free[i]);
 	free(get_free);
 	return;
 }

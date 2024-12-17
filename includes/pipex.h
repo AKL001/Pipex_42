@@ -12,6 +12,6 @@
 
 char	*find_path(char *cmd, char **envp);
 void exec_path(char *full_cmd, char **env);
-
+void ft_free(char **get_free);
 
 #endif 
