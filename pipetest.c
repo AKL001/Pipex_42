@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <fcntl.h>
+/*
 void	error(void)
 {
 	perror("\033[31mError");
@@ -62,20 +64,23 @@ void exec_path(char *full_cmd, char **env)
 		free(cmd);
 		return;
 	}
-}
+}*/
 // build the thing
 int main(int ac, char *av[], char *env[]) 
 {
-
-    // char *cmd[] = {av[1],av[2], NULL};
-    // execve(find_path(av[1], env), cmd, NULL);
-	/* first we need to create the child then the second child then pipe the output of the first child to the second child and exec
-	
-	*/
-	exec_path(av[1],env);
-	// char *path = exec_path(av[1], env);
-	// printf("%s\n",path);
-	// free(path);
-
-    return 0;
+  int fd[2];
+  char str[7];
+  int bt_read;
+  
+  if (pipe(fd) == -1)
+    return 2;
+  write(fd[1],"hello\n",6);
+  printf("fd[1] =>%d\nfd[0] =>%d\n",fd[1],fd[0]);
+  bt_read = read(fd[0],str,6);
+  if (bt_read > 0)
+    printf("%s",str);
+  printf("bt_read =>%d\n",bt_read);
+  close(fd[1]);
+  close(fd[0]);
+  return 0;
 }
