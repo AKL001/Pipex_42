@@ -1,80 +1,129 @@
-#include "../includes/pipex.h"
+#include "pipex.h"
 
-int main(int ac, char *av[], char **env) {
-    int fd[ac - 4][2];  // n-1 pipes for n commands
-    int i, j;
+static void get_init(t_pipex *pipex, char *infile, char *cmds[], int argc)
+{
+    int i;
 
-    // Create pipes
-    i = 0;
-    while (i < ac - 4) {
-        if (pipe(fd[i]) == -1) {
-            perror("pipe");
-            exit(EXIT_FAILURE);
-        }
-        i++;
+    pipex->infile = open(infile, O_RDONLY, 0777);
+    if (pipex->infile == -1)
+    {
+        close(pipex->infile);
+        failed_to();
     }
-    // Fork and execute commands
-    i = 0;
-    while (i < ac - 3) {  // ac-3 commands means ac-4 pipes
-        pid_t pid = fork();
-        
-        if (pid == -1) {
-            perror("fork");
-            exit(EXIT_FAILURE);
-        }
-
-        if (pid == 0) {  // In child process
-            // Redirect input
-            if (i == 0) {  // First command needs to read from input file
-                int infile = open(av[1], O_RDONLY, 0644);  // Read from input file
-                if (infile < 0) {
-                    perror("fail to open input file");
-                    exit(EXIT_FAILURE);
-                }
-                dup2(infile, STDIN_FILENO);
-                close(infile);
-            } else {  // Intermediate commands need to read from previous pipe
-                dup2(fd[i - 1][0], STDIN_FILENO);
-            }
-
-            // Redirect output
-            if (i == ac - 4) {  // Last command needs to write to output file
-                int outfile = open(av[ac - 1], O_WRONLY | O_CREAT | O_TRUNC, 0644);  // Write to output file
-                if (outfile < 0) {
-                    perror("fail to open output file");
-                    exit(EXIT_FAILURE);
-                }
-                dup2(outfile, STDOUT_FILENO);
-                close(outfile);
-            } else {  // Intermediate commands need to write to next pipe
-                dup2(fd[i][1], STDOUT_FILENO);
-            }
-
-            // Close all pipe file descriptors
-            j = 0;
-            while (j < ac - 4) {
-                close(fd[j][0]);
-                close(fd[j][1]);
-                j++;
-            }
-
-            // Execute the command
-            exec_path(av[i + 2], env); 
-             // Execute the command passed in the arguments
-        }
-        i++;
-    }
-    // Parent process: Close all pipe file descriptors
-    j = -1;
-    while (++j < ac - 4) {
-        close(fd[j][0]);
-        close(fd[j][1]);
-    }
-    // Wait for all child processes
+    pipex->pipefd = malloc(sizeof(*pipex->pipefd) * pipex->pipes_num);
+    if (!pipex->pipefd)
+        return;
+    pipex->cmd_args = malloc(sizeof(char *) * (pipex->cmd_num + 1));
+    if (!pipex->cmd_args)
+        return;
+    pipex->cmd_args[pipex->cmd_num] = NULL;
     i = -1;
-    while (++i < ac - 3) {
-        wait(NULL);
+    while (++i < pipex->cmd_num)
+    {
+        pipex->cmd_args[i] = ft_strdup(cmds[i]);
+        if (!pipex->cmd_args[i])
+        {
+            ft_free(pipex->cmd_args);
+            failed_to();
+        }
     }
+}
 
-    return 0;
+static void create_pipes(t_pipex *pipex)
+{
+    int i = -1;
+    while (++i < pipex->pipes_num)
+    {
+        if (pipe(pipex->pipefd[i]) == -1)
+        {
+            while (--i >= 0)
+            {
+                close(pipex->pipefd[i][0]);
+                close(pipex->pipefd[i][1]);
+            }
+            free(pipex->pipefd);
+            ft_free(pipex->cmd_args);
+            failed_to();
+        }
+    }
+}
+
+static void close_all_pipes(t_pipex *pipex)
+{
+    int j = -1;
+    while (++j < pipex->pipes_num)
+    {
+        close(pipex->pipefd[j][0]);
+        close(pipex->pipefd[j][1]);
+    }
+}
+static void exec_childs(int i,t_pipex *pipex)
+{
+    if (i == 0)
+    {
+        dup2(pipex->infile, STDIN_FILENO);
+        close(pipex->infile);
+    }
+    else
+        dup2(pipex->pipefd[i-1][0], STDIN_FILENO);
+
+    if (i == pipex->cmd_num - 1)
+    {
+        dup2(pipex->outfile, STDOUT_FILENO);
+        close(pipex->outfile);
+    }
+    else if (i != pipex->cmd_num - 1)
+        dup2(pipex->pipefd[i][1], STDOUT_FILENO);
+    close_all_pipes(pipex); 
+    exec_path(pipex->cmd_args[i], pipex->env);
+}
+static void execute_all_cmds(t_pipex *pipex)
+{
+    int i,pids;
+
+    i = -1;
+    while (++i < pipex->cmd_num)
+    {
+        pids = fork();
+        if (pids == -1)
+            failed_to();
+        if (pids == 0)
+        {
+            exec_childs(i,pipex);
+            ft_free(pipex->cmd_args);
+            free(pipex->pipefd);
+            failed_to();
+        }
+    }
+    close_all_pipes(pipex);
+    i = -1;
+    while (++i < pipex->cmd_num)
+        wait(NULL);
+}
+
+int main(int argc, char *argv[], char *env[])
+{
+    t_pipex pipex;
+    if (argc >= 5)
+    {
+        pipex.env = env;
+        pipex.cmd_num = argc - 3;
+        pipex.pipes_num = pipex.cmd_num - 1;
+        pipex.argc = argc;
+        if (ft_strncmp(argv[1], "here_doc", 8) == 0)
+		    {
+		      pipex.outfile = open(argv[argc - 1], O_WRONLY | O_CREAT | O_APPEND, 0777);
+			    here_doc(argv[2], argc);
+        }
+        get_init(&pipex, argv[1], &argv[2], argc);
+        pipex.outfile = open(argv[argc-1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (pipex.outfile == -1)
+            failed_to();
+        create_pipes(&pipex);
+        execute_all_cmds(&pipex);
+        ft_free(pipex.cmd_args);  
+        free(pipex.pipefd);
+    }
+    else
+        failed_to();
 }

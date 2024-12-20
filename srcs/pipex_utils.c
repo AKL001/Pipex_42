@@ -26,6 +26,12 @@ char	*ft_strnstr(const char *big, const char *little, size_t n)
 	return (NULL);
 }
 
+void failed_to(void)
+{
+    perror("\033[31mError");
+    exit(EXIT_FAILURE);
+}
+
 char	*ft_strdup(const char *s1)
 {
 	size_t	len;

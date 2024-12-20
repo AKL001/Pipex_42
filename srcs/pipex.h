@@ -32,7 +32,7 @@ void exec_path(char *full_cmd, char **env);
 char *find_path(char *cmd, char **envp);
 void ft_free(char **get_free);
 char	*ft_strdup(const char *s1);
-
+void failed_to(void);
 
 #endif 
 
