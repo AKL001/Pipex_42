@@ -86,8 +86,6 @@ void execute_all_cmds(t_pipex *pipex)
 
     if (pid == 0)
     {
-      // i = 0  => means the first cmd will read from the file
-      // redirecting the input
       if (i == 0)
       {
         dup2(pipex->infile, STDIN_FILENO);

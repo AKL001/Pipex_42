@@ -8,6 +8,17 @@
 # include <sys/wait.h>
 # include <fcntl.h>
 
+typedef struct s_pipex
+{
+    int infile;
+    int outfile;
+    int (*pipefd)[2];
+    char **cmd_args;
+    char **env;       
+    int cmd_num;
+    int pipes_num;
+    int argc;
+} t_pipex;
 
 
 char *ft_strnstr(const char *big, const char *little, size_t n);

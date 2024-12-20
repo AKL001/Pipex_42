@@ -263,9 +263,12 @@ void ft_free(char **get_free)
 {
 	int i;
 
-	i = -1;
-	while(get_free[++i])
+	i = 0;
+	while(get_free[i])
+	{
 		free(get_free[i]);
+		i++;
+	}
 	free(get_free);
 	return;
 }
