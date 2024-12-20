@@ -25,6 +25,21 @@ char	*ft_strnstr(const char *big, const char *little, size_t n)
 	}
 	return (NULL);
 }
+
+char	*ft_strdup(const char *s1)
+{
+	size_t	len;
+	char	*dst;
+
+	len = ft_strlen(s1);
+	dst = (char *)malloc(sizeof(char) * (len + 1));
+	if (!dst)
+		return (0);
+	ft_memcpy(dst, s1, len);
+	dst[len] = '\0';
+	return (dst);
+}
+
 char	*ft_substr(char const *s, unsigned int start, size_t len)
 {
 	char	*ptr;
