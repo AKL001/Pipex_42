@@ -38,24 +38,24 @@ int get_next_line(char *delimiter,t_here_doc *here_doc)
     char c;
     int i;
 
-    buffer = ft_strdup("");
+    buffer = malloc(1000 * sizeof(char));
     if (!buffer)
         return 2;
     bytes_read = read(0, &c,1);
     i = 0;
     while (bytes_read > 0)
     {
-        if (c && c != '\n')
+        if (c != '\n' && c)  
             buffer[i++] = c;
         if (c == '\n')
         {
             buffer[i++] = c;
-            break ;
+            buffer[i] = '\0';
+            break; // Save the newline character
         }
         bytes_read = read(0, &c,1);
     }
-    buffer[i] = '\0'; 
-    if (ft_strncmp(buffer,delimiter,ft_strlen(delimiter)))
+    if (ft_strncmp(buffer,delimiter,ft_strlen(delimiter)) == 0)
     {
         free(buffer);
         return 0;
@@ -63,28 +63,36 @@ int get_next_line(char *delimiter,t_here_doc *here_doc)
     else
     {
         tmp = ft_strjoin(here_doc->buffer,buffer);
+        if (!tmp)
+        {
+            free(buffer);
+            return 2;
+        }
         here_doc->buffer = tmp;
-        free(buffer);
+        tmp = NULL; 
         free(tmp);
+        free(buffer);
         return 1;  
     }
 }
 int main(int agrc,char *argv[],char *env[])
 {
 
-    t_here_doc *here_doc;
-
-    if (ft_strncmp(argv[1],"here_doc",8))
+    t_here_doc here_doc;
+    here_doc.buffer = ft_strdup("");
+    if (!here_doc.buffer)
+        return 0;
+    if (ft_strncmp(argv[1],"here_doc",8) == 0)
     {
-        here_doc->buffer = ft_strdup("");
-        if (!here_doc->buffer)
-            return 0;
         write(1, "here_doc>",9);
-        while (get_next_line(argv[2],here_doc) == 1)
+        while (get_next_line(argv[2],&here_doc) == 1)
         {
             write(1, "here_doc>",9);
         }
-        write(1, &here_doc->buffer,ft_strlen(here_doc->buffer));
-        free(here_doc->buffer);
-    }
+        // write(1, &here_doc.buffer,ft_strlen(here_doc.buffer));
+        printf("%s\n",here_doc.buffer);
+        free(here_doc.buffer);
+      
+      //write(1, "yes\n",4);
+  }
 }
